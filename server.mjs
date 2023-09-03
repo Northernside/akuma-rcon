@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import rconList from "./rcon_.json";
+import rconList from "./rcon.json";
 import { inspect } from "node:util";
 
 const _c = inspect.colors;

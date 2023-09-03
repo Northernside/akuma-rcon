@@ -125,11 +125,12 @@ async function serverConnection(host, port = 25575, password) {
                 listID = client.executeCommand("list");
                 versionID = null;
             } else if (requestId === listID) {
-                console.log(yellow(`✔ Players: ${packet.payload.split("are ")[1].split(" ")[0]}/${packet.payload.split("x of ")[1].split(" p")[0]}`));
+                const cleanedMsg = packet.payload.replace(/Â§[0-9a-f]/g, "");
+                console.log(yellow(`✔ Players: ${listString(cleanedMsg)}`));
                 await newMsg(client, onCancel);
                 listID = null;
             } else {
-                console.log(packet.payload);
+                console.log(convertColors(packet.payload));
                 await newMsg(client);
             }
         });
@@ -154,9 +155,55 @@ const versionString = raw => {
     else return `${raw.split("version ")[1].split(") (")[0]})`;
 }
 
+const listString = raw => {
+    return raw.includes("maximum")
+        ? raw.split("are ")[1].split(" ")[0] + "/" + raw.split("maximum ")[1].split(" ")[0]
+        : raw.split("are ")[1].split(" ")[0] + "/" + raw.split("x of ")[1].split(" p")[0];
+}
+
 const onCancel = _prompt => {
     console.log(red("✖ Bye!"));
     process.exit(0);
+}
+
+const colorMapping = {
+    "§0": black,
+    "§1": blue,
+    "§2": green,
+    "§3": cyan,
+    "§4": red,
+    "§5": magenta,
+    "§6": yellow,
+    "§7": white,
+    "§8": grey,
+    "§9": cyan,
+    "§a": green,
+    "§b": cyan,
+    "§c": red,
+    "§d": magenta,
+    "§e": yellow,
+    "§f": white,
+    "§k": inverse,
+    "§l": bold,
+    "§m": underline,
+    "§n": underline,
+    "§o": italic,
+    "§r": white
+};
+
+
+function convertColors(input) {
+    const colorRegex = /§[0-9a-fk-lnor]/g,
+        colorParts = input.split(colorRegex).slice(1),
+        colors = input.match(colorRegex) || [];
+
+    if (colorParts.length === 0) return input;
+    return colorParts.reduce((acc, val, index) => {
+        const color = colors[index];
+        if (colorMapping[color]) acc += colorMapping[color](val);
+        else acc += val;
+        return acc;
+    }, "");
 }
 
 // Utils ----->
