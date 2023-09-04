@@ -4,7 +4,6 @@ import { RCONClient } from "@minecraft-js/rcon";
 
 const _c = inspect.colors;
 Object.keys(_c).forEach(c => global[c] = s => `\x1b[${_c[c][0]}m${s}\x1b[${_c[c][1]}m`);
-
 let versionID, listID;
 
 // <----- Main Menu
@@ -15,7 +14,8 @@ const mainMenu = [{
     message: "Mode",
     choices: [
         { title: "Client", value: "client" },
-        { title: "API Browser", value: "api" }
+        { title: "API Browser", value: "api" },
+        { title: "Broadcaster", value: "broadcaster" }
     ],
     initial: 0
 }];
@@ -56,6 +56,43 @@ if (modeChoice.value === "client") {
     let jsonResp = await (await fetch(pageURL + 1)).json(), stats = jsonResp.stats, page = jsonResp.page;
     console.log(`Loaded ${yellow("✔")} ${stats.total} servers, ${stats.pages} pages, ${stats.passwords.length} unique passwords`);
     await pageHandler(pageNumber);
+} else if (modeChoice.value === "broadcaster") {
+    const allServers = await fetch(`${Bun.env.API_URL}/api/servers/all`).then(async r => await r.json());
+    console.log(`Loaded ${yellow("✔")} ${allServers.stats.total} servers, ${allServers.stats.pages} pages`);
+
+    const servers = allServers.servers,
+        answers = Object.values(await prompts({
+            type: "text",
+            name: "commands",
+            message: `Commands to execute (split with "[;]")`
+        })), commands = answers[0].split("[;]");
+
+    console.log(`Executing ${yellow("✔")} ${commands.length} commands`);
+    for (const server of servers) {
+        try {
+            const client = new RCONClient(server.ip, server.password, 25575);
+            client.connect();
+
+            client.on("authenticated", async () => {
+                for (const command of commands) {
+                    client.executeCommand(command);
+                    await new Promise(r => setTimeout(r, 75));
+                }
+
+                client.disconnect();
+            });
+
+            client.on("error", async (_error) => { });
+            client.on("response", async (packet, _requestId) => {
+                console.log(`${server.ip}: ${packet.payload}`);
+            });
+        } catch (_e) { }
+
+        await new Promise(r => setTimeout(r, 75));
+    }
+
+    console.log(`${yellow("✔")} Done!`);
+    process.exit(0);
 }
 
 async function pageHandler(pageNumber) {
@@ -156,9 +193,11 @@ const versionString = raw => {
 }
 
 const listString = raw => {
-    return raw.includes("maximum")
-        ? raw.split("are ")[1].split(" ")[0] + "/" + raw.split("maximum ")[1].split(" ")[0]
-        : raw.split("are ")[1].split(" ")[0] + "/" + raw.split("x of ")[1].split(" p")[0];
+    return raw.includes("/")
+        ? `${raw.split("/")[0].split(" ")[2]}/${raw.split("/")[1].split(" ")[0]}`
+        : raw.includes("maximum")
+            ? `${raw.split("are ")[1].split(" ")[0]}/${raw.split("maximum ")[1].split(" ")[0]}`
+            : `${raw.split("are ")[1].split(" ")[0]}/${raw.split("x of ")[1].split(" p")[0]}`;
 }
 
 const onCancel = _prompt => {
