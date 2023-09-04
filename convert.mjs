@@ -11,7 +11,7 @@ if (!outputFile) errorHandler("No output file specified");
 if (!existsSync(inputFile)) errorHandler("Input file does not exist");
 if (existsSync(outputFile)) errorHandler("Output file already exists");
 
-const input = Buffer.from(await Bun.file("rcon.txt").arrayBuffer()).toString().replaceAll("\r", "");
+const input = Buffer.from(await Bun.file(inputFile).arrayBuffer()).toString().replaceAll("\r", "");
 
 let output = input.split("\n").map(line => {
     const [ip, password] = line.split(":");
