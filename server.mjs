@@ -34,6 +34,16 @@ app.get("/api/servers", ({ query }) => {
     }
 });
 
+app.get("/api/servers/all", ({ }) => {
+    return {
+        stats: {
+            total: rconList.length,
+            pages: rconPages.length
+        },
+        servers: rconList
+    }
+});
+
 app.listen({
     port: Bun.env.PORT || 4242,
     hostname: Bun.env.HOST || "127.0.0.1"
